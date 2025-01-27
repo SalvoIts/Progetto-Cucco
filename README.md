@@ -1,0 +1,1 @@
+Questo progetto è in fase di svulippo. Attualmente lavorando sul backend, fatto in Flask.
