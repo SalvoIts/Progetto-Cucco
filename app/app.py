@@ -1,5 +1,4 @@
 # app.py
-
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from scraper import scrape_serp
@@ -26,9 +25,9 @@ def analyze():
 
     logging.info(f"Starting analysis for keyword: {keyword}")
 
-    # Scrape SERP using Selenium
+    # Scrape SERP using BeautifulSoup
     try:
-        serp_urls = scrape_serp(keyword)
+        serp_urls = scrape_serp(keyword, num_results=20)
         logging.info(f"Scraped {len(serp_urls)} URLs from SERP.")
         if not serp_urls:
             logging.warning("No URLs scraped from SERP.")

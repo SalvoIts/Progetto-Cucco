@@ -1,53 +1,48 @@
+# scraper.py
 import requests
 from bs4 import BeautifulSoup
 import logging
 import time
-
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+from utils import get_random_user_agent
 
 def scrape_serp(keyword, num_results=20):
     query = keyword.replace(" ", "+")
     url = f"https://duckduckgo.com/html/?q={query}"
 
-    # Headers to simulate a real browser request (avoid detection as a bot)
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+        "User-Agent": get_random_user_agent()
     }
 
-    # Send GET request to fetch the SERP page
-    logging.debug(f"Fetching SERP from URL: {url}")
-    response = requests.get(url, headers=headers, allow_redirects=True)
+    session = requests.Session()
+    retries = Retry(total=5,
+                    backoff_factor=1,
+                    status_forcelist=[500, 502, 503, 504],
+                    allowed_methods=["GET", "POST"])
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount('https://', adapter)
+    session.mount('http://', adapter)
 
-    # Wait a moment to handle redirection and cookies (simulate browser behavior)
-    time.sleep(2)
+    try:
+        logging.debug(f"Fetching SERP from URL: {url}")
+        response = session.get(url, headers=headers, allow_redirects=True)
+        response.raise_for_status()
+        time.sleep(2)  # To mimic human behavior and avoid detection
 
-    # Parse the HTML content using BeautifulSoup
-    soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(response.text, "html.parser")
+        results = []
+        links = soup.select('.result__a')
 
-    # Extract the URLs of the search results (DuckDuckGo's structure)
-    results = []
-    links = soup.select('.result__a')  # Correct selector for DuckDuckGo search results
+        for link in links:
+            href = link.get('href')
+            if href:
+                results.append(href)
+                if len(results) >= num_results:
+                    break
 
-    for link in links:
-        href = link.get('href')
-        if href:
-            results.append(href)
-            if len(results) >= num_results:
-                break
-
-    logging.debug(f"Extracted {len(results)} URLs from SERP.")
-    return results
-
-# Example usage
-if __name__ == "__main__":
-    keyword = "cisop"
-    num_results = 20
-    urls = scrape_serp_duckduckgo(keyword, num_results)
-    
-    if urls:
-        print(f"Scraped {len(urls)} URLs from DuckDuckGo SERP:")
-        for idx, url in enumerate(urls, start=1):
-            print(f"{idx}. {url}")
-    else:
-        print("No URLs found.")
+        logging.debug(f"Extracted {len(results)} URLs from SERP.")
+        return results
+    except requests.exceptions.RequestException as e:
+        logging.exception(f"Error fetching SERP: {e}")
+        return []
