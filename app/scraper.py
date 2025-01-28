@@ -1,45 +1,53 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-import time
+import requests
+from bs4 import BeautifulSoup
 import logging
+import time
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
 
 def scrape_serp(keyword, num_results=20):
     query = keyword.replace(" ", "+")
-    url = f"https://www.google.com/search?q={query}&num={num_results}"
-    
-    # Configure Selenium WebDriver options
-    options = Options()
-    options.headless = True  # Run in headless mode (no UI)
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+    url = f"https://duckduckgo.com/html/?q={query}"
 
-    # Use Chrome WebDriver (or install via `webdriver-manager`)
-    driver = webdriver.Chrome(options=options)  # Ensure `chromedriver` is installed
+    # Headers to simulate a real browser request (avoid detection as a bot)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+    }
+
+    # Send GET request to fetch the SERP page
     logging.debug(f"Fetching SERP from URL: {url}")
-    
-    driver.get(url)
-    time.sleep(2)  # Allow the page to load
+    response = requests.get(url, headers=headers, allow_redirects=True)
 
-    # Handle consent page if present
-    try:
-        consent_button = driver.find_element(By.XPATH, '//button[text()="I agree"]')
-        consent_button.click()
-        time.sleep(2)  # Allow the page to reload
-        logging.debug("Accepted Google's consent page.")
-    except Exception:
-        logging.debug("No consent page detected.")
+    # Wait a moment to handle redirection and cookies (simulate browser behavior)
+    time.sleep(2)
 
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Extract the URLs of the search results (DuckDuckGo's structure)
     results = []
-    links = driver.find_elements(By.CSS_SELECTOR, 'div.yuRUbf > a')
+    links = soup.select('.result__a')  # Correct selector for DuckDuckGo search results
+
     for link in links:
-        href = link.get_attribute('href')
+        href = link.get('href')
         if href:
             results.append(href)
             if len(results) >= num_results:
                 break
-    
-    driver.quit()
+
     logging.debug(f"Extracted {len(results)} URLs from SERP.")
     return results
+
+# Example usage
+if __name__ == "__main__":
+    keyword = "cisop"
+    num_results = 20
+    urls = scrape_serp_duckduckgo(keyword, num_results)
+    
+    if urls:
+        print(f"Scraped {len(urls)} URLs from DuckDuckGo SERP:")
+        for idx, url in enumerate(urls, start=1):
+            print(f"{idx}. {url}")
+    else:
+        print("No URLs found.")
