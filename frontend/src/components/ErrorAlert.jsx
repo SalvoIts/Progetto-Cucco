@@ -1,4 +1,3 @@
-// src/components/ErrorAlert.js
 import React from 'react';
 import { Alert } from '@mui/material';
 

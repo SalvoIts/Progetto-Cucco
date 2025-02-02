@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useRef } from 'react';
 import {
   Container,
@@ -12,7 +11,7 @@ import ResultsTable from './components/ResultsTable';
 import ResultsChart from './components/ResultsChart';
 import Spinner from './components/Spinner';
 import ErrorAlert from './components/ErrorAlert';
-import WebsiteDetailsSection from './components/WebsiteDetailsSection'; // NEW component
+import WebsiteDetailsSection from './components/WebsiteDetailsSection';
 import { analyzeKeyword, downloadCSV } from './services/api';
 
 const App = () => {
@@ -21,7 +20,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Create a ref to scroll to the website details section
+  // ref to scroll to the website details section
   const detailsRef = useRef(null);
 
   // Called when a search is performed

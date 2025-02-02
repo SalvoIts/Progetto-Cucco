@@ -1,4 +1,3 @@
-// src/components/SearchForm.jsx
 import React, { useState } from 'react';
 import { TextField, Button, Box } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';

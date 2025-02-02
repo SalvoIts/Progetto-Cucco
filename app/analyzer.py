@@ -1,7 +1,5 @@
-# analyzer.py
 import requests
 from bs4 import BeautifulSoup
-import re
 import logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -9,7 +7,7 @@ from utils import calculate_keyword_density, get_random_user_agent, can_fetch
 import random
 import time
 
-def analyze_pages(urls, keyword):
+def analyze_pages(urls, keyword, ignore_robots=True):
     analyzed_data = []
     failed_urls = []
 
@@ -23,9 +21,11 @@ def analyze_pages(urls, keyword):
     session.mount('http://', adapter)
 
     for url in urls:
-        if not can_fetch(url, user_agent=get_random_user_agent()):
-            logging.warning(f"Disallowed by robots.txt: {url}")
-            continue
+        # Only enforce robots.txt check if ignore_robots is False.  - Used for not limiting web scrape results
+        if not ignore_robots:
+            if not can_fetch(url, user_agent=get_random_user_agent()):
+                logging.warning(f"Disallowed by robots.txt: {url}")
+                continue
 
         try:
             headers = {"User-Agent": get_random_user_agent()}
@@ -38,13 +38,13 @@ def analyze_pages(urls, keyword):
             title_tag = soup.find('title')
             title = title_tag.text.strip() if title_tag else 'N/A'
             title_length = len(title)
-            title_best_practice = 50 <= title_length <= 60  # Adjust range as needed
+            title_best_practice = 50 <= title_length <= 60
 
             # Extract meta description
             meta_desc = soup.find('meta', attrs={'name': 'description'})
             meta_description = meta_desc['content'].strip() if meta_desc else 'N/A'
             meta_length = len(meta_description)
-            meta_best_practice = 120 <= meta_length <= 160  # Adjust range as needed
+            meta_best_practice = 120 <= meta_length <= 160
 
             # Extract headings
             headings = {f'H{i}': [] for i in range(1, 7)}
@@ -52,10 +52,9 @@ def analyze_pages(urls, keyword):
                 for tag in soup.find_all(f'h{i}'):
                     headings[f'H{i}'].append(tag.text.strip())
 
-            # Check for missing H1
             has_h1 = len(headings['H1']) > 0
 
-            # Calculate keyword density using the improved function
+            # Calculate keyword density
             text = soup.get_text(separator=' ', strip=True)
             keyword_density = calculate_keyword_density(text, keyword)
 
@@ -79,8 +78,7 @@ def analyze_pages(urls, keyword):
             logging.debug(f"Analyzed data for URL: {url}")
 
             # Rate limiting to avoid being detected as a bot
-            time.sleep(random.uniform(1, 3))  # Sleep between 1 to 3 seconds
-
+            time.sleep(random.uniform(1, 3))
         except requests.exceptions.HTTPError as http_err:
             logging.warning(f"HTTP error occurred for {url}: {http_err}")
             failed_urls.append(url)

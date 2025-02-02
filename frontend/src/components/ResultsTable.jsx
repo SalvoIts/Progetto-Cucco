@@ -1,4 +1,3 @@
-// src/components/ResultsTable.jsx
 import React, { useMemo } from 'react';
 import {
   useTable,

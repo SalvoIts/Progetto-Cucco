@@ -1,4 +1,3 @@
-// src/components/ResultsChart.js
 import React, { useState } from 'react';
 import {
   Paper,

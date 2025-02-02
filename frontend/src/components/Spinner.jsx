@@ -1,4 +1,3 @@
-// src/components/Spinner.js
 import React from 'react';
 import { TailSpin } from 'react-loader-spinner';
 import { Box } from '@mui/material';
