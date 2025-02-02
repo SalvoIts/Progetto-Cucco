@@ -1,5 +1,5 @@
-// src/App.js
-import React, { useState } from 'react';
+// src/App.jsx
+import React, { useState, useRef } from 'react';
 import {
   Container,
   Typography,
@@ -12,18 +12,24 @@ import ResultsTable from './components/ResultsTable';
 import ResultsChart from './components/ResultsChart';
 import Spinner from './components/Spinner';
 import ErrorAlert from './components/ErrorAlert';
+import WebsiteDetailsSection from './components/WebsiteDetailsSection'; // NEW component
 import { analyzeKeyword, downloadCSV } from './services/api';
 
 const App = () => {
   const [results, setResults] = useState([]);
+  const [selectedWebsite, setSelectedWebsite] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Create a ref to scroll to the website details section
+  const detailsRef = useRef(null);
+
+  // Called when a search is performed
   const handleAnalyze = async (keyword) => {
     setLoading(true);
     setError(null);
     setResults([]);
-
+    setSelectedWebsite(null); // Clear previously selected website
     try {
       const data = await analyzeKeyword(keyword);
       setResults(data);
@@ -34,6 +40,7 @@ const App = () => {
     }
   };
 
+  // Called when the Download CSV button is clicked
   const handleDownload = async () => {
     try {
       const blob = await downloadCSV();
@@ -49,12 +56,34 @@ const App = () => {
     }
   };
 
+  // Called when a row in the table is clicked.
+  // This function sets the selected website and scrolls to the details section.
+  const handleRowClick = (rowData) => {
+    setSelectedWebsite(rowData);
+    if (detailsRef.current) {
+      detailsRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" align="center" gutterBottom>
+    <Container
+      maxWidth="lg"
+      sx={{
+        py: 4,
+        backgroundColor: '#f0f4f8',
+        borderRadius: 2,
+        boxShadow: 3,
+      }}
+    >
+      <Typography
+        variant="h4"
+        align="center"
+        gutterBottom
+        sx={{ fontWeight: 'bold', mb: 3 }}
+      >
         SEO Competitiveness Analysis
       </Typography>
-      <SearchForm onSubmit={handleAnalyze} />
+      <SearchForm isLoading={loading} onSubmit={handleAnalyze} />
       {loading && <Spinner />}
       {error && <ErrorAlert message={error} />}
       {!loading && results.length > 0 && (
@@ -69,8 +98,15 @@ const App = () => {
               Download CSV
             </Button>
           </Box>
-          <ResultsTable data={results} />
+          {/* Pass the row-click handler to ResultsTable */}
+          <ResultsTable data={results} onRowClick={handleRowClick} />
           <ResultsChart data={results} />
+          {/* Detailed Website Information section */}
+          <WebsiteDetailsSection
+            websites={results}
+            selectedWebsite={selectedWebsite}
+            detailsRef={detailsRef}
+          />
         </>
       )}
     </Container>

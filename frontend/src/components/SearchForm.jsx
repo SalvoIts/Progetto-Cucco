@@ -1,9 +1,9 @@
-// src/components/SearchForm.js
+// src/components/SearchForm.jsx
 import React, { useState } from 'react';
 import { TextField, Button, Box } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
-const SearchForm = ({ onSubmit }) => {
+const SearchForm = ({ isLoading, onSubmit }) => {
   const [keyword, setKeyword] = useState('');
 
   const handleSubmit = (e) => {
@@ -17,7 +17,15 @@ const SearchForm = ({ onSubmit }) => {
     <Box
       component="form"
       onSubmit={handleSubmit}
-      sx={{ display: 'flex', alignItems: 'center', mb: 4 }}
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        mb: 4,
+        backgroundColor: '#fff',
+        p: 2,
+        borderRadius: 2,
+        boxShadow: 1,
+      }}
     >
       <TextField
         label="Enter Keyword"
@@ -30,7 +38,8 @@ const SearchForm = ({ onSubmit }) => {
       <Button
         type="submit"
         variant="contained"
-        color="primary"
+        color={isLoading ? "secondary" : "primary"}
+        disabled={isLoading}
         startIcon={<SearchIcon />}
       >
         Analyze

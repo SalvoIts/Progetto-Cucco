@@ -1,6 +1,6 @@
 // TabularGraphPage.jsx
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import axios from "axios";
 import {
   Chart as ChartJS,
@@ -11,7 +11,7 @@ import {
   Legend,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
-import { saveAs } from 'file-saver';
+import { saveAs } from "file-saver";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -22,8 +22,10 @@ const TabularGraphPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [testMessage, setTestMessage] = useState("");
+  const [selectedWebsite, setSelectedWebsite] = useState(null);
 
-  const API_BASE_URL = '/api'; // Relative URL due to Vite proxy
+  const detailsRef = useRef(null);
+  const API_BASE_URL = "/api"; // Relative URL due to Vite proxy
 
   const handleSearch = async () => {
     if (!searchKeyword.trim()) {
@@ -34,17 +36,23 @@ const TabularGraphPage = () => {
     setLoading(true);
     try {
       const response = await axios.post(`${API_BASE_URL}/analyze`, {
-        keyword: searchKeyword
+        keyword: searchKeyword,
       });
       console.log("Response Data:", response.data);
       if (Array.isArray(response.data) && response.data.length > 0) {
         setResults(response.data);
+        // Clear any previously selected website details
+        setSelectedWebsite(null);
       } else {
         setError("No data found for the given keyword.");
       }
     } catch (err) {
       console.error("Error during analyze:", err);
-      if (err.response && err.response.data && err.response.data.error) {
+      if (
+        err.response &&
+        err.response.data &&
+        err.response.data.error
+      ) {
         setError(err.response.data.error);
       } else {
         setError("An error occurred while fetching data.");
@@ -55,17 +63,20 @@ const TabularGraphPage = () => {
   };
 
   const handleDownload = () => {
-    axios.get(`${API_BASE_URL}/download`, {
-      responseType: 'blob',
-    })
-    .then((response) => {
-      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
-      saveAs(blob, 'seo_results.csv');
-    })
-    .catch((error) => {
-      console.error("Error downloading the file", error);
-      setError("An error occurred while downloading the CSV.");
-    });
+    axios
+      .get(`${API_BASE_URL}/download`, {
+        responseType: "blob",
+      })
+      .then((response) => {
+        const blob = new Blob([response.data], {
+          type: "text/csv;charset=utf-8;",
+        });
+        saveAs(blob, "seo_results.csv");
+      })
+      .catch((error) => {
+        console.error("Error downloading the file", error);
+        setError("An error occurred while downloading the CSV.");
+      });
   };
 
   const handleTest = async () => {
@@ -78,12 +89,20 @@ const TabularGraphPage = () => {
     }
   };
 
+  // When a row is clicked, set the selected website and scroll to the details section.
+  const handleRowClick = (result) => {
+    setSelectedWebsite(result);
+    if (detailsRef.current) {
+      detailsRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   const chartData = {
-    labels: results.map((result, index) => `Result ${index + 1}`),
+    labels: results.map((_, index) => `Result ${index + 1}`),
     datasets: [
       {
         label: "Keyword Density (%)",
-        data: results.map(result => result['Keyword Density (%)']),
+        data: results.map((result) => result["Keyword Density (%)"]),
         backgroundColor: "rgba(75, 192, 192, 0.6)",
       },
     ],
@@ -103,7 +122,7 @@ const TabularGraphPage = () => {
 
       {/* Main Content */}
       <main className="flex-grow p-6 w-full">
-        <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-md p-8 flex flex-col w-full h-full">
+        <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-md p-8 flex flex-col w-full">
           {/* Search Input */}
           <div className="mb-6 flex flex-col sm:flex-row items-center">
             <input
@@ -112,7 +131,9 @@ const TabularGraphPage = () => {
               placeholder="Enter a keyword to search..."
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSearch();
+              }}
             />
             <button
               className="px-6 py-3 rounded-lg font-bold bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all duration-200"
@@ -127,7 +148,7 @@ const TabularGraphPage = () => {
           {/* Test Button for CORS */}
           <div className="mb-6">
             <button
-              className="px-4 py-2 bg-green-500 text-white rounded"
+              className="px-4 py-2 bg-green-500 text-white rounded shadow hover:bg-green-600 transition-colors duration-200"
               onClick={handleTest}
             >
               Test CORS
@@ -138,7 +159,7 @@ const TabularGraphPage = () => {
           {/* Tab Buttons */}
           {results.length > 0 && (
             <>
-              <div className="flex space-x-6 mb-6">
+              <div className="flex flex-wrap gap-4 mb-6">
                 <button
                   className={`px-6 py-3 rounded-lg font-bold transition-all duration-200 ${
                     activeTab === "table"
@@ -173,39 +194,65 @@ const TabularGraphPage = () => {
                   <table className="min-w-full bg-white rounded-lg shadow-md">
                     <thead>
                       <tr className="bg-blue-100">
-                        <th className="px-6 py-3 text-left font-bold text-blue-700">URL</th>
-                        <th className="px-6 py-3 text-left font-bold text-blue-700">Title</th>
-                        <th className="px-6 py-3 text-left font-bold text-blue-700">Title Length</th>
-                        <th className="px-6 py-3 text-left font-bold text-blue-700">Meta Description</th>
-                        <th className="px-6 py-3 text-left font-bold text-blue-700">Meta Length</th>
-                        <th className="px-6 py-3 text-left font-bold text-blue-700">Has H1</th>
-                        <th className="px-6 py-3 text-left font-bold text-blue-700">Keyword Density (%)</th>
+                        <th className="px-6 py-3 text-left font-bold text-blue-700">
+                          URL
+                        </th>
+                        <th className="px-6 py-3 text-left font-bold text-blue-700">
+                          Title
+                        </th>
+                        <th className="px-6 py-3 text-left font-bold text-blue-700">
+                          Title Length
+                        </th>
+                        <th className="px-6 py-3 text-left font-bold text-blue-700">
+                          Meta Description
+                        </th>
+                        <th className="px-6 py-3 text-left font-bold text-blue-700">
+                          Meta Length
+                        </th>
+                        <th className="px-6 py-3 text-left font-bold text-blue-700">
+                          Has H1
+                        </th>
+                        <th className="px-6 py-3 text-left font-bold text-blue-700">
+                          Keyword Density (%)
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {results.map((result, index) => (
                         <tr
                           key={index}
-                          className={`border-t ${
+                          className={`border-t cursor-pointer transition-colors duration-200 ${
                             index % 2 === 0 ? "bg-gray-50" : "bg-white"
-                          }`}
+                          } hover:bg-blue-50`}
+                          onClick={() => handleRowClick(result)}
                         >
                           <td className="px-6 py-3">
                             <a
                               href={result.URL}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
                               className="text-blue-600 underline hover:text-blue-800"
                             >
                               {result.URL}
                             </a>
                           </td>
                           <td className="px-6 py-3">{result.Title}</td>
-                          <td className="px-6 py-3">{result['Title Length']}</td>
-                          <td className="px-6 py-3">{result['Meta Description']}</td>
-                          <td className="px-6 py-3">{result['Meta Description Length']}</td>
-                          <td className="px-6 py-3">{result['Has H1'] ? 'Yes' : 'No'}</td>
-                          <td className="px-6 py-3">{result['Keyword Density (%)']}</td>
+                          <td className="px-6 py-3">
+                            {result["Title Length"]}
+                          </td>
+                          <td className="px-6 py-3">
+                            {result["Meta Description"]}
+                          </td>
+                          <td className="px-6 py-3">
+                            {result["Meta Description Length"]}
+                          </td>
+                          <td className="px-6 py-3">
+                            {result["Has H1"] ? "Yes" : "No"}
+                          </td>
+                          <td className="px-6 py-3">
+                            {result["Keyword Density (%)"]}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -222,7 +269,7 @@ const TabularGraphPage = () => {
                       maintainAspectRatio: false,
                       plugins: {
                         legend: {
-                          position: 'top',
+                          position: "top",
                         },
                       },
                       scales: {
@@ -236,6 +283,28 @@ const TabularGraphPage = () => {
                 </div>
               )}
             </>
+          )}
+
+          {/* Website Details Section */}
+          {selectedWebsite && (
+            <div
+              ref={detailsRef}
+              className="mt-10 p-6 bg-gradient-to-r from-green-100 to-green-200 rounded-lg shadow-lg transition-all duration-300"
+            >
+              <h2 className="text-2xl font-bold mb-4">Website Details</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(selectedWebsite).map(([key, value]) => (
+                  <div key={key} className="p-4 bg-white rounded shadow">
+                    <strong className="block mb-1 text-gray-700">{key}:</strong>
+                    <pre className="whitespace-pre-wrap text-gray-800 text-sm">
+                      {typeof value === "object"
+                        ? JSON.stringify(value, null, 2)
+                        : value?.toString()}
+                    </pre>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </main>
